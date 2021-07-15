@@ -9,7 +9,33 @@ pub struct UbloxRawMsg {
 }
 
 impl UbloxRawMsg {
-    fn checksum(class: u8, id: u8, payload: &[u8]) -> [u8; 2] {
+    pub fn new(class: u8, id: u8, payload: Vec<u8>) -> Self {
+        let checksum = Self::calc_checksum(class, id, &payload);
+        UbloxRawMsg {
+            class,
+            id,
+            payload,
+            checksum,
+        }
+    }
+
+    pub fn class(&self) -> u8 {
+        self.class
+    }
+
+    pub fn id(&self) -> u8 {
+        self.id
+    }
+
+    pub fn take_payload(self) -> Vec<u8> {
+        self.payload
+    }
+
+    pub fn checksum(&self) -> [u8; 2] {
+        self.checksum
+    }
+
+    fn calc_checksum(class: u8, id: u8, payload: &[u8]) -> [u8; 2] {
         let mut ck_a = 0u8;
         let mut ck_b = 0u8;
 
@@ -63,14 +89,8 @@ impl TryFrom<Vec<u8>> for UbloxRawMsg {
         }
 
         let payload = bytes[6..6 + length].to_vec();
-        let checksum = Self::checksum(class, id, &payload);
 
-        Ok(Self {
-            class,
-            id,
-            payload,
-            checksum,
-        })
+        Ok(Self::new(class, id, payload))
     }
 }
 
@@ -110,13 +130,7 @@ mod test {
     #[test]
     fn simple_test_to_vec() {
         let payload = vec![b't', b'e', b's', b't'];
-        let checksum = UbloxRawMsg::checksum(0x01, 0x02, &payload);
-        let msg = UbloxRawMsg {
-            class: 0x01,
-            id: 0x02,
-            payload,
-            checksum,
-        };
+        let msg = UbloxRawMsg::new(0x01, 0x02, payload);
         let bytes: Vec<u8> = msg.into();
         assert_eq!(
             bytes,
