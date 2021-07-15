@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-struct UbloxRawMsg {
+pub struct UbloxRawMsg {
     class: u8,
     id: u8,
     payload: Vec<u8>,
