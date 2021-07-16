@@ -2,6 +2,8 @@ use std::convert::{TryFrom, TryInto};
 
 use bitflags::bitflags;
 
+use super::GnssId;
+
 bitflags! {
     pub struct UbxRxmRawxRecvStatus: u8 {
         const LEAP_SEC = 0x01;
@@ -23,7 +25,7 @@ pub struct UbxRxmRawxMeasurement {
     pub pseudorange: f64,
     pub carrier_phase: f64,
     pub doppler: f32,
-    pub gnss_id: u8,
+    pub gnss_id: GnssId,
     pub sv_id: u8,
     pub freq_id: u8,
     pub locktime: u16,
@@ -40,7 +42,7 @@ impl From<UbxRxmRawxMeasurement> for Vec<u8> {
         result.extend(&measurement.pseudorange.to_le_bytes()[..]);
         result.extend(&measurement.carrier_phase.to_le_bytes()[..]);
         result.extend(&measurement.doppler.to_le_bytes()[..]);
-        result.push(measurement.gnss_id);
+        result.push(measurement.gnss_id as u8);
         result.push(measurement.sv_id);
         result.push(0);
         result.push(measurement.freq_id);
@@ -75,7 +77,7 @@ impl TryFrom<Vec<u8>> for UbxRxmRawxMeasurement {
             f64::from_le_bytes(bytes[8..16].try_into().map_err(|err| format!("{}", err))?);
         let doppler =
             f32::from_le_bytes(bytes[16..20].try_into().map_err(|err| format!("{}", err))?);
-        let gnss_id = bytes[20];
+        let gnss_id = GnssId::try_from(bytes[20])?;
         let sv_id = bytes[21];
         let freq_id = bytes[23];
         let locktime =
