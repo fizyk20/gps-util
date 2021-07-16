@@ -83,7 +83,7 @@ impl TryFrom<Vec<u8>> for UbxRxmRawxMeasurement {
         let cno = bytes[26];
 
         let pseudorange_stdev = match bytes[27] {
-            x if x < 16 => x as f32 * 0.01,
+            x if x < 16 => 2.0f32.powi(x as i32) * 0.01,
             x => {
                 return Err(format!("invalid pseudorange stdev: {}", x));
             }
@@ -96,7 +96,7 @@ impl TryFrom<Vec<u8>> for UbxRxmRawxMeasurement {
             }
         };
         let doppler_stdev = match bytes[29] {
-            x if x < 16 => x as f32 * 0.002,
+            x if x < 16 => 2.0f32.powi(x as i32) * 0.002,
             x => {
                 return Err(format!("invalid Doppler stdev: {}", x));
             }
