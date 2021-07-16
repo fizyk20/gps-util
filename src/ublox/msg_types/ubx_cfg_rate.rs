@@ -26,9 +26,9 @@ impl TryFrom<u16> for UbxCfgRateTimeRef {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct UbxCfgRate {
-    meas_rate_ms: u16,
-    nav_rate_cycles: u16,
-    time_ref: UbxCfgRateTimeRef,
+    pub meas_rate_ms: u16,
+    pub nav_rate_cycles: u16,
+    pub time_ref: UbxCfgRateTimeRef,
 }
 
 impl From<UbxCfgRate> for Vec<u8> {

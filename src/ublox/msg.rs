@@ -1,6 +1,6 @@
 use std::convert::{TryFrom, TryInto};
 
-use super::{msg_types::*, UbloxRawMsg};
+pub use super::{msg_types::*, UbloxRawMsg};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum UbloxMsg {

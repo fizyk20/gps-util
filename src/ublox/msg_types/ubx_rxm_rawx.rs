@@ -20,18 +20,18 @@ bitflags! {
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct UbxRxmRawxMeasurement {
-    pseudorange: f64,
-    carrier_phase: f64,
-    doppler: f32,
-    gnss_id: u8,
-    sv_id: u8,
-    freq_id: u8,
-    locktime: u16,
-    cno: u8,
-    pseudorange_stdev: f32,
-    carrier_phase_stdev: Option<f32>,
-    doppler_stdev: f32,
-    trk_status: UbxRxmRawxMeasurementTrkStatus,
+    pub pseudorange: f64,
+    pub carrier_phase: f64,
+    pub doppler: f32,
+    pub gnss_id: u8,
+    pub sv_id: u8,
+    pub freq_id: u8,
+    pub locktime: u16,
+    pub cno: u8,
+    pub pseudorange_stdev: f32,
+    pub carrier_phase_stdev: Option<f32>,
+    pub doppler_stdev: f32,
+    pub trk_status: UbxRxmRawxMeasurementTrkStatus,
 }
 
 impl From<UbxRxmRawxMeasurement> for Vec<u8> {
@@ -124,11 +124,11 @@ impl TryFrom<Vec<u8>> for UbxRxmRawxMeasurement {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct UbxRxmRawx {
-    rcv_tow: f64,
-    week: u16,
-    leap_sec: i8,
-    recv_status: UbxRxmRawxRecvStatus,
-    measurements: Vec<UbxRxmRawxMeasurement>,
+    pub rcv_tow: f64,
+    pub week: u16,
+    pub leap_sec: i8,
+    pub recv_status: UbxRxmRawxRecvStatus,
+    pub measurements: Vec<UbxRxmRawxMeasurement>,
 }
 
 impl From<UbxRxmRawx> for Vec<u8> {
