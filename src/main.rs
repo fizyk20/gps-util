@@ -126,6 +126,8 @@ fn main() {
         rate: 1,
     })));
 
+    port.send(Message::Ublox(UbloxMsg::CfgGnss(UbxCfgGnss::Poll)));
+
     loop {
         if let Err(err) = port.read() {
             println!("Error! {}\n", err);
@@ -134,6 +136,41 @@ fn main() {
         let msg = port.read_msg();
         match msg {
             None => {}
+            Some(Message::Ublox(UbloxMsg::CfgGnss(UbxCfgGnss::Settings {
+                version,
+                num_trk_ch_hw,
+                num_trk_ch_use,
+                config_blocks,
+            }))) => {
+                println!(
+                    "{:#?}\n",
+                    Message::Ublox(UbloxMsg::CfgGnss(UbxCfgGnss::Settings {
+                        version,
+                        num_trk_ch_hw,
+                        num_trk_ch_use,
+                        config_blocks: config_blocks.clone()
+                    }))
+                );
+                let config_blocks = config_blocks
+                    .into_iter()
+                    .map(|mut block| {
+                        if block.gnss_id != GnssId::Gps {
+                            block.enabled = false;
+                        } else {
+                            block.res_trk_ch = block.max_trk_ch;
+                        }
+                        block
+                    })
+                    .collect();
+                let msg = UbloxMsg::CfgGnss(UbxCfgGnss::Settings {
+                    version,
+                    num_trk_ch_hw,
+                    num_trk_ch_use,
+                    config_blocks,
+                });
+                println!("Sending {:#?}\n", msg);
+                port.send(Message::Ublox(msg));
+            }
             Some(msg) => {
                 println!("{:#?}\n", msg);
             }

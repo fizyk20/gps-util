@@ -1,11 +1,11 @@
-use std::convert::{TryFrom, TryInto};
+use std::convert::TryFrom;
 
 use bitflags::bitflags;
 
 use super::GnssId;
 
 bitflags! {
-    pub struct UbxCfgGnssBlockFlagsGps: u16 {
+    pub struct UbxCfgGnssBlockFlagsGps: u8 {
         const L1CA = 0x01;
         const L2C = 0x10;
         const L5 = 0x20;
@@ -21,31 +21,31 @@ pub enum UbxCfgGnssBlockFlags {
 impl From<UbxCfgGnssBlockFlags> for Vec<u8> {
     fn from(flags: UbxCfgGnssBlockFlags) -> Vec<u8> {
         match flags {
-            UbxCfgGnssBlockFlags::Gps(gps) => gps.bits().to_le_bytes().to_vec(),
-            UbxCfgGnssBlockFlags::Other => vec![0, 0],
+            UbxCfgGnssBlockFlags::Gps(gps) => vec![gps.bits()],
+            UbxCfgGnssBlockFlags::Other => vec![0],
         }
     }
 }
 
 impl UbxCfgGnssBlockFlags {
-    fn gps_try_from(val: u16) -> Result<UbxCfgGnssBlockFlags, String> {
+    fn gps_try_from(val: u8) -> Result<UbxCfgGnssBlockFlags, String> {
         UbxCfgGnssBlockFlagsGps::from_bits(val)
             .ok_or_else(|| format!("invalid UbxCfgGnssBlockFlagsGps: {}", val))
             .map(UbxCfgGnssBlockFlags::Gps)
     }
 
-    fn other_try_from(_val: u16) -> Result<UbxCfgGnssBlockFlags, String> {
+    fn other_try_from(_val: u8) -> Result<UbxCfgGnssBlockFlags, String> {
         Ok(UbxCfgGnssBlockFlags::Other)
     }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct UbxCfgGnssBlock {
-    gnss_id: GnssId,
-    res_trk_ch: u8,
-    max_trk_ch: u8,
-    enabled: bool,
-    flags: UbxCfgGnssBlockFlags,
+    pub gnss_id: GnssId,
+    pub res_trk_ch: u8,
+    pub max_trk_ch: u8,
+    pub enabled: bool,
+    pub flags: UbxCfgGnssBlockFlags,
 }
 
 impl From<UbxCfgGnssBlock> for Vec<u8> {
@@ -56,7 +56,9 @@ impl From<UbxCfgGnssBlock> for Vec<u8> {
         } else {
             result.push(0);
         }
+        result.push(0);
         result.extend(Vec::<u8>::from(block.flags));
+        result.push(0);
         result
     }
 }
@@ -75,10 +77,9 @@ impl TryFrom<Vec<u8>> for UbxCfgGnssBlock {
                 return Err(format!("UbxCfgGnssBlock: invalid value for enabled: {}", x));
             }
         };
-        let flags = u16::from_le_bytes(bytes[6..8].try_into().map_err(|err| format!("{}", err))?);
         let flags = match gnss_id {
-            GnssId::Gps => UbxCfgGnssBlockFlags::gps_try_from(flags)?,
-            _ => UbxCfgGnssBlockFlags::other_try_from(flags)?,
+            GnssId::Gps => UbxCfgGnssBlockFlags::gps_try_from(bytes[6])?,
+            _ => UbxCfgGnssBlockFlags::other_try_from(bytes[6])?,
         };
 
         Ok(UbxCfgGnssBlock {
