@@ -7,6 +7,7 @@ pub enum UbloxMsg {
     CfgMsg(UbxCfgMsg),
     CfgPrt(UbxCfgPrt),
     CfgRate(UbxCfgRate),
+    CfgGnss(UbxCfgGnss),
     RxmSfrbx(UbxRxmSfrbx),
     RxmRawx(UbxRxmRawx),
     //RxmSfrbx(UbxRxmSfrbx),
@@ -38,6 +39,10 @@ impl TryFrom<UbloxRawMsg> for UbloxMsg {
                 let inner = UbxCfgRate::try_from(raw_msg.take_payload())?;
                 Ok(UbloxMsg::CfgRate(inner))
             }
+            (0x06, 0x3e) => {
+                let inner = UbxCfgGnss::try_from(raw_msg.take_payload())?;
+                Ok(UbloxMsg::CfgGnss(inner))
+            }
             _ => Ok(UbloxMsg::Other(raw_msg)),
         }
     }
@@ -60,6 +65,7 @@ impl From<UbloxMsg> for UbloxRawMsg {
             UbloxMsg::CfgPrt(inner) => UbloxRawMsg::new(0x06, 0x00, inner.into()),
             UbloxMsg::CfgMsg(inner) => UbloxRawMsg::new(0x06, 0x01, inner.into()),
             UbloxMsg::CfgRate(inner) => UbloxRawMsg::new(0x06, 0x08, inner.into()),
+            UbloxMsg::CfgGnss(inner) => UbloxRawMsg::new(0x06, 0x3e, inner.into()),
             UbloxMsg::Other(raw_msg) => raw_msg,
         }
     }
