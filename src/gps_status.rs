@@ -1,4 +1,4 @@
-use std::{collections::HashMap, time::SystemTime};
+use std::{collections::HashMap, f64::consts::PI, time::SystemTime};
 
 use nalgebra::Vector3;
 
@@ -164,8 +164,8 @@ impl SatelliteOrbitalElements {
         } else if tk < -302400.0 {
             tk += 604800.0;
         }
-        let n = n0 + self.delta_n;
-        let mk = self.m0 + n * tk;
+        let n = n0 + self.delta_n * PI;
+        let mk = self.m0 * PI + n * tk;
         let mut ecc_anomaly = mk;
         loop {
             let new_ecc_anomaly = ecc_anomaly
@@ -179,23 +179,24 @@ impl SatelliteOrbitalElements {
         let true_anomaly =
             2.0 * (((1.0 + self.e) / (1.0 - self.e)).sqrt() * (ecc_anomaly / 2.0).tan()).atan();
 
-        let phi_k = true_anomaly + self.omega_small;
+        let phi_k = true_anomaly + self.omega_small * PI;
         let delta_uk = self.c_us * (2.0 * phi_k).sin() + self.c_uc * (2.0 * phi_k).cos();
         let delta_rk = self.c_rs * (2.0 * phi_k).sin() + self.c_rc * (2.0 * phi_k).cos();
         let delta_ik = self.c_is * (2.0 * phi_k).sin() + self.c_ic * (2.0 * phi_k).cos();
 
         let uk = phi_k + delta_uk;
         let rk = a * (1.0 - self.e * ecc_anomaly.cos()) + delta_rk;
-        let ik = self.i0 + delta_ik + self.i_dot * tk;
+        let ik = self.i0 * PI + delta_ik + self.i_dot * PI * tk;
         let xkprim = rk * uk.cos();
         let ykprim = rk * uk.sin();
 
-        let omega_k = self.omega0 + (self.omega_dot - omega_e) * tk - omega_e * self.t_oe as f64;
+        let omega_k =
+            self.omega0 * PI + (self.omega_dot * PI - omega_e) * tk - omega_e * self.t_oe as f64;
 
         let xk = xkprim * omega_k.cos() - ykprim * omega_k.sin() * ik.cos();
         let yk = xkprim * omega_k.sin() + ykprim * omega_k.cos() * ik.cos();
         let zk = ykprim * ik.sin();
 
-        Vector3::new(xk, yk, zk)
+        Vector3::new(xk, zk, yk) // we're using a coordinate system where Y is along the Earth's axis
     }
 }

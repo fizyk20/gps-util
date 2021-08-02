@@ -133,7 +133,6 @@ fn main() {
     let _port_thread = thread::spawn(move || port_thread(gps_status_clone));
 
     let start = Instant::now();
-    let mut old_t = 0.0;
 
     // event handling loop (in main thread)
     event_loop.run(move |ev, _, control_flow| {
@@ -155,16 +154,14 @@ fn main() {
             },
             Event::MainEventsCleared => {
                 let t = start.elapsed().as_secs_f32();
-                if old_t < t.floor() {
-                    let satellites: Vec<_> =
-                        gps_status.read().unwrap().complete_satellites().collect();
-                    let gps_t = gps_status.read().unwrap().gps_time();
-                    for (sv_id, orb_elem) in satellites {
-                        println!("{}: {:#?}\n", sv_id, orb_elem.position(gps_t));
-                    }
-                }
-                old_t = t;
-                renderer.draw(&display, t);
+                let gps_t = gps_status.read().unwrap().gps_time();
+                let satellites: Vec<_> = gps_status
+                    .read()
+                    .unwrap()
+                    .complete_satellites()
+                    .map(|(sv_id, orb_elem)| (sv_id, orb_elem.position(gps_t)))
+                    .collect();
+                renderer.draw(&display, t, satellites);
             }
             _ => (),
         }
