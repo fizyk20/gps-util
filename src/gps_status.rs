@@ -197,6 +197,6 @@ impl SatelliteOrbitalElements {
         let yk = xkprim * omega_k.sin() + ykprim * omega_k.cos() * ik.cos();
         let zk = ykprim * ik.sin();
 
-        Vector3::new(xk, zk, yk) // we're using a coordinate system where Y is along the Earth's axis
+        Vector3::new(xk, zk, -yk) // we're using a coordinate system where Y is along the Earth's axis
     }
 }
