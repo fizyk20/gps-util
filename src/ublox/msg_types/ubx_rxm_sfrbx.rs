@@ -42,14 +42,23 @@ pub enum GpsSubframe {
     Subframe5,
 }
 
+impl GpsSubframe {
+    pub fn iode(&self) -> u8 {
+        match *self {
+            GpsSubframe::Subframe2 { iode, .. } | GpsSubframe::Subframe3 { iode, .. } => iode,
+            _ => panic!("wrong subframe for IODE! {:#?}", self),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct UbxRxmSfrbxDataGps {
-    tlm_message: u16,
-    integrity_bit: bool,
-    tow: u32,
-    anti_spoof: bool,
-    alert: bool,
-    subframe: GpsSubframe,
+    pub tlm_message: u16,
+    pub integrity_bit: bool,
+    pub tow: u32,
+    pub anti_spoof: bool,
+    pub alert: bool,
+    pub subframe: GpsSubframe,
 }
 
 impl From<UbxRxmSfrbxDataGps> for Vec<u8> {

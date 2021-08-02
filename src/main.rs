@@ -1,17 +1,34 @@
+mod gps_status;
 mod port_buffer;
+mod renderer;
 mod ublox;
 
-use std::{thread, time::Duration};
-
-use serialport::{self};
-
-use port_buffer::*;
-use ublox::{
-    GnssId, UbloxMsg, UbxCfgGnss, UbxCfgMsg, UbxCfgPrt, UbxCfgPrtUsbInMask, UbxCfgPrtUsbOutMask,
-    UbxCfgRate, UbxCfgRateTimeRef,
+use std::{
+    sync::{Arc, RwLock},
+    thread,
+    time::{Duration, Instant},
 };
 
-fn port_thread() {
+use glium::{
+    glutin::{
+        event::{ElementState, Event, VirtualKeyCode, WindowEvent},
+        event_loop::{ControlFlow, EventLoop},
+        window::WindowBuilder,
+        ContextBuilder,
+    },
+    Display,
+};
+use serialport::{self};
+
+use gps_status::GpsStatus;
+use port_buffer::*;
+use renderer::Renderer;
+use ublox::{
+    GnssId, UbloxMsg, UbxCfgGnss, UbxCfgMsg, UbxCfgPrt, UbxCfgPrtUsbInMask, UbxCfgPrtUsbOutMask,
+    UbxCfgRate, UbxCfgRateTimeRef, UbxRxmRawx, UbxRxmSfrbx, UbxRxmSfrbxData, UbxRxmSfrbxDataGps,
+};
+
+fn port_thread(gps_status: Arc<RwLock<GpsStatus>>) {
     let serial = serialport::new("/dev/ttyACM0", 9600)
         .timeout(Duration::from_secs(10))
         .open_native()
@@ -50,6 +67,9 @@ fn port_thread() {
             continue;
         }
         let msg = port.read_msg();
+        if let Some(ref msg) = msg {
+            println!("{:#?}", msg);
+        }
         match msg {
             None => {}
             Some(Message::Ublox(UbloxMsg::CfgGnss(UbxCfgGnss::Settings {
@@ -58,15 +78,6 @@ fn port_thread() {
                 num_trk_ch_use,
                 config_blocks,
             }))) => {
-                println!(
-                    "{:#?}\n",
-                    Message::Ublox(UbloxMsg::CfgGnss(UbxCfgGnss::Settings {
-                        version,
-                        num_trk_ch_hw,
-                        num_trk_ch_use,
-                        config_blocks: config_blocks.clone()
-                    }))
-                );
                 let config_blocks = config_blocks
                     .into_iter()
                     .map(|mut block| {
@@ -87,14 +98,76 @@ fn port_thread() {
                 println!("Sending {:#?}\n", msg);
                 port.send(Message::Ublox(msg));
             }
-            Some(msg) => {
-                println!("{:#?}\n", msg);
+            Some(Message::Ublox(UbloxMsg::RxmRawx(UbxRxmRawx { rcv_tow, week, .. }))) => {
+                gps_status
+                    .write()
+                    .unwrap()
+                    .set_time_correction(week as f64 * 604800.0 + rcv_tow);
             }
+            Some(Message::Ublox(UbloxMsg::RxmSfrbx(UbxRxmSfrbx {
+                sv_id,
+                data: UbxRxmSfrbxData::Gps(UbxRxmSfrbxDataGps { subframe, .. }),
+                ..
+            }))) => {
+                gps_status
+                    .write()
+                    .unwrap()
+                    .consume_subframe(sv_id, subframe);
+            }
+            _ => {}
         }
     }
 }
 
 fn main() {
-    let port_thread = thread::spawn(port_thread);
-    port_thread.join().unwrap();
+    let event_loop = EventLoop::new();
+
+    let wb = WindowBuilder::new().with_title("GPS Visualization");
+    let cb = ContextBuilder::new();
+    let display = Display::new(wb, cb, &event_loop).unwrap();
+
+    let mut renderer = Renderer::new(&display);
+
+    let gps_status = Arc::new(RwLock::new(GpsStatus::new()));
+    let gps_status_clone = gps_status.clone();
+    let _port_thread = thread::spawn(move || port_thread(gps_status_clone));
+
+    let start = Instant::now();
+    let mut old_t = 0.0;
+
+    // event handling loop (in main thread)
+    event_loop.run(move |ev, _, control_flow| {
+        match ev {
+            Event::WindowEvent { event, .. } => match event {
+                WindowEvent::CloseRequested => {
+                    *control_flow = ControlFlow::Exit;
+                    return;
+                }
+                WindowEvent::KeyboardInput { input, .. } => {
+                    match (input.state, input.virtual_keycode) {
+                        (ElementState::Pressed, Some(VirtualKeyCode::Space)) => {
+                            // TODO
+                        }
+                        _ => (),
+                    }
+                }
+                _ => return,
+            },
+            Event::MainEventsCleared => {
+                let t = start.elapsed().as_secs_f32();
+                if old_t < t.floor() {
+                    let satellites: Vec<_> =
+                        gps_status.read().unwrap().complete_satellites().collect();
+                    let gps_t = gps_status.read().unwrap().gps_time();
+                    for (sv_id, orb_elem) in satellites {
+                        println!("{}: {:#?}\n", sv_id, orb_elem.position(gps_t));
+                    }
+                }
+                old_t = t;
+                renderer.draw(&display, t);
+            }
+            _ => (),
+        }
+        *control_flow = ControlFlow::Poll;
+    });
 }

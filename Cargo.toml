@@ -9,3 +9,6 @@ edition = "2018"
 [dependencies]
 bitflags = "1.2"
 serialport = "4.0"
+glium = "0.30"
+glium_text = { git = "https://github.com/fizyk20/glium_text", branch = "master" }
+nalgebra = "0.28"
