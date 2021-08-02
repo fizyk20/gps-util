@@ -1,7 +1,7 @@
 mod port_buffer;
 mod ublox;
 
-use std::time::Duration;
+use std::{thread, time::Duration};
 
 use serialport::{self};
 
@@ -95,5 +95,6 @@ fn port_thread() {
 }
 
 fn main() {
-    port_thread()
+    let port_thread = thread::spawn(port_thread);
+    port_thread.join().unwrap();
 }
